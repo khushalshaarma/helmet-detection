@@ -150,11 +150,15 @@ h3{
 <!-- ================= RIGHT ================= -->
 <div class="card right">
 
-    <h3>Camera Feed</h3>
+    <h3>Camera Feed / Detection Result</h3>
     <img id="liveCam" src="">
 
     {% if image %}
-    <img src="{{ image }}">
+    <div style="margin-top:20px;">
+        <h4 style="color:#00ff66; text-shadow: 0 0 10px #00ff66;">📊 Detection Result:</h4>
+        <img src="{{ image }}?t={{ range(1, 1000)|random }}" style="margin-top:10px; border: 3px solid #00c6ff;">
+        <p style="margin-top:10px; font-size:14px; color:#aaa;">🟩 Green Box = Helmet Detected | 🟥 Red Box = No Helmet</p>
+    </div>
     {% endif %}
 
 </div>
@@ -224,6 +228,8 @@ function setRed(){
     clearInterval(interval); // STOP TIMER
     interval = null;
     stopTimerFlag = true; // prevent auto-restart
+    countdown = 30; // Reset countdown
+    updateTimer(); // Update display to show 30s
 }
 
 function setGreen(){
@@ -244,10 +250,11 @@ setInterval(()=>{
 
     const d = ctx.getImageData(20,40,1,1).data;
 
-    if(d[0] > 150 && d[1] < 80){
+    // Check pixel color: Red channel (d[2]) for RED signal, Green channel (d[1]) for GREEN signal
+    if(d[2] > 150){  // Red pixel detected - NO HELMET
         setRed();
-    } else {
-        stopTimerFlag = false; // allow timer when green
+    } else if(d[1] > 150){  // Green pixel detected - HELMET PRESENT
+        stopTimerFlag = false;
         setGreen();
     }
 

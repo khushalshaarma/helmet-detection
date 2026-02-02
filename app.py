@@ -20,24 +20,42 @@ def index():
         img_path = "static/upload.jpg"
         image.save(img_path)
 
+        # Read image with OpenCV
+        img = cv2.imread(img_path)
+        
         results = model(img_path)
 
         helmet_detected = False
 
+        # Draw bounding boxes on image
         for r in results:
             for box in r.boxes:
                 cls = int(box.cls[0])
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                conf = box.conf[0]
 
-                # Class 0 = helmet (common in these models)
+                # Class 0 = helmet (GREEN), others = no helmet (RED)
                 if cls == 0:
                     helmet_detected = True
+                    color = (0, 255, 0)  # Green for helmet
+                    label = f"Helmet {conf:.2f}"
+                else:
+                    color = (0, 0, 255)  # Red for no helmet
+                    label = f"No Helmet {conf:.2f}"
+
+                # Draw rectangle and label on image
+                cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(img, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+        # Save processed image
+        cv2.imwrite(img_path, img)
 
         if helmet_detected:
             signal = "GREEN"
         else:
             signal = "RED"
 
-    return render_template("index.html", signal=signal)
+    return render_template("index.html", signal=signal, image="static/upload.jpg" if signal else None)
 
 def generate_frames():
     global helmet_status
