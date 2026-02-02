@@ -32,6 +32,7 @@ helmet-detection/
 ├── requirements.txt # Project dependencies
 └── README.md
 
+<img width="1919" height="941" alt="Screenshot 2026-02-03 015924" src="https://github.com/user-attachments/assets/c0379610-dd8f-42df-86e2-c49da4067909" />
 
 ## 🔮 Future Scope
 - 🔍 **Live penalty system** by integrating:
@@ -42,5 +43,6 @@ helmet-detection/
 - 📱 Real-time alerts to admin / supervisor  
 - 🤖 Multi-PPE detection (helmet, mask, gloves, safety shoes)  
 - ⚙️ Deployment on edge devices (Raspberry Pi / Jetson Nano)  
-- 🔒 Privacy features like automatic face blurring for non-violators  
+- 🔒 Privacy features like automatic face blurring for non-violators
+- 
 
