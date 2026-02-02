@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>AI Helmet Detection Dashboard</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Segoe UI", Arial;
+}
+
+body{
+    min-height:100vh;
+    color:white;
+    background:
+    linear-gradient(rgba(0,0,0,.75), rgba(0,0,0,.85)),
+    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=2000");
+    background-size:cover;
+}
+
+/* layout */
+.container{
+    display:flex;
+    gap:40px;
+    padding:40px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
+
+.card{
+    background:rgba(255,255,255,.08);
+    backdrop-filter:blur(12px);
+    border-radius:20px;
+    padding:25px;
+    box-shadow:0 10px 35px rgba(0,0,0,.7);
+}
+
+.left{ width:380px; text-align:center; }
+.right{ width:720px; text-align:center; }
+
+/* buttons */
+button{
+    padding:10px 22px;
+    margin-top:10px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:600;
+    color:white;
+}
+
+.scan{ background:#00c6ff; }
+.live{ background:#ff9800; }
+.stop{ background:#ff2b2b; }
+
+/* ===== TRAFFIC LIGHT ===== */
+
+.traffic{
+    background:#d4a017;
+    width:110px;
+    padding:18px;
+    border-radius:25px;
+    margin:15px auto;
+}
+
+.lamp{
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    background:#111;
+    margin:12px auto;
+    transition:.3s;
+}
+
+.red.on{ background:#ff1a1a; box-shadow:0 0 40px red; }
+.green.on{ background:#00ff66; box-shadow:0 0 40px #00ff66; }
+
+.timer{
+    font-size:26px;
+    font-weight:bold;
+    margin-top:5px;
+}
+
+/* camera */
+#liveCam{
+    width:100%;
+    display:none;
+    border-radius:15px;
+    box-shadow:0 0 35px black;
+}
+
+img{
+    width:100%;
+    border-radius:15px;
+    margin-top:15px;
+}
+
+h3{
+    margin-top:15px;
+}
+</style>
+</head>
+
+<body>
+
+<h2 style="text-align:center;margin-top:20px;">🚦 AI Helmet Detection Dashboard</h2>
+
+<div class="container">
+
+<!-- ================= LEFT ================= -->
+<div class="card left">
+
+    <!-- IMAGE SCAN -->
+    <h3>📸 Image Scan</h3>
+
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="image" required>
+        <br>
+        <button class="scan" type="submit">Scan</button>
+    </form>
+
+    <!-- SCAN TRAFFIC LIGHT (NO TIMER) -->
+    <div class="traffic">
+        <div class="lamp red {% if signal=='RED' %}on{% endif %}"></div>
+        <div class="lamp"></div>
+        <div class="lamp green {% if signal=='GREEN' %}on{% endif %}"></div>
+    </div>
+
+    <hr style="margin:25px 0;">
+
+    <!-- LIVE CAMERA -->
+    <h3>🎥 Live Monitoring</h3>
+
+    <button class="live" onclick="startCam()">Start</button>
+    <button class="stop" onclick="stopCam()">Stop</button>
+
+    <!-- LIVE TRAFFIC LIGHT (WITH TIMER) -->
+    <div class="traffic">
+        <div id="liveRed" class="lamp red"></div>
+        <div class="lamp"></div>
+        <div id="liveGreen" class="lamp green on"></div>
+    </div>
+
+    <div id="timer" class="timer">30s</div>
+
+</div>
+
+<!-- ================= RIGHT ================= -->
+<div class="card right">
+
+    <h3>Camera Feed</h3>
+    <img id="liveCam" src="">
+
+    {% if image %}
+    <img src="{{ image }}">
+    {% endif %}
+
+</div>
+
+</div>
+
+<!-- hidden canvas -->
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+let countdown = 30;
+let interval = null;
+let stopTimerFlag = false; // flag to stop timer on RED
+
+const cam = document.getElementById("liveCam");
+const timerText = document.getElementById("timer");
+const red = document.getElementById("liveRed");
+const green = document.getElementById("liveGreen");
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+
+/* ================= START ================= */
+function startCam(){
+    cam.src = "/video_feed";
+    cam.style.display = "block";
+    stopTimerFlag = false; // allow timer
+    startTimer();
+}
+
+/* ================= STOP ================= */
+function stopCam(){
+    cam.src = "";
+    cam.style.display = "none";
+
+    clearInterval(interval);
+    interval = null;
+    countdown = 30;
+    updateTimer();
+    setGreen();
+}
+
+/* ================= TIMER ================= */
+function startTimer(){
+    clearInterval(interval);
+
+    interval = setInterval(()=>{
+        countdown--;
+        updateTimer();
+
+        if(countdown <= 0){
+            countdown = 30;
+        }
+
+    },1000);
+}
+
+function updateTimer(){
+    timerText.innerText = countdown + "s";
+}
+
+/* ================= SIGNAL ================= */
+function setRed(){
+    red.classList.add("on");
+    green.classList.remove("on");
+    clearInterval(interval); // STOP TIMER
+    interval = null;
+    stopTimerFlag = true; // prevent auto-restart
+}
+
+function setGreen(){
+    green.classList.add("on");
+    red.classList.remove("on");
+
+    if(!interval && !stopTimerFlag) startTimer(); // only start if flag is false
+}
+
+/* ================= AUTO DETECTION ================= */
+setInterval(()=>{
+    if(cam.style.display === "none") return;
+
+    canvas.width = cam.width;
+    canvas.height = cam.height;
+
+    ctx.drawImage(cam,0,0);
+
+    const d = ctx.getImageData(20,40,1,1).data;
+
+    if(d[0] > 150 && d[1] < 80){
+        setRed();
+    } else {
+        stopTimerFlag = false; // allow timer when green
+        setGreen();
+    }
+
+},300);
+
+</script>
+
+</body>
+</html>
